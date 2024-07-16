@@ -1,27 +1,16 @@
-import socket
-import struct
-import textwrap
+from scapy.all import *
 
-# Create a raw socket
-raw_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
+def packet_callback(packet):
+    if IP in packet:
+        src_ip = packet[IP].src
+        dst_ip = packet[IP].dst
+        protocol = packet[IP].proto
+        payload = packet[Raw].load if Raw in packet else None
+        
+        print(f"Packet: {src_ip} -> {dst_ip} Protocol: {protocol}")
+        if payload:
+            print(f"Payload: {payload.hex()}")  # Display payload data in hexadecimal
 
-raw_socket.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
-
-while True:
-    packet = raw_socket.recvfrom(65535)[0]  # Receive a packet
-
-    # Unpack IP header
-    ip_header = packet[0:20]
-    iph = struct.unpack('!BBHHHBBH4s4s', ip_header)
-
-    version_ihl = iph[0]
-    version = version_ihl >> 4
-    ihl = version_ihl & 0xF
-    iph_length = ihl * 4
-    ttl = iph[5]
-    protocol = iph[6]
-    s_addr = socket.inet_ntoa(iph[8])
-    d_addr = socket.inet_ntoa(iph[9])
-
-    print('IP -> Version:' + str(version) + ', Header Length:' + str(ihl) + \
-      ', TTL:' + str(ttl) + ', Protocol:' + str(protocol) + ', Source:' + str(s_addr))
+# Sniff packets
+print("Starting packet sniffer...")
+sniff(prn=packet_callback, store=0)
